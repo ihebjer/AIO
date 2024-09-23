@@ -1,0 +1,17 @@
+{
+  "offset": [1,1,1,1,1,1,1,1,1,1],
+  "human_class": 2,
+  "init": 0,
+  "object_human":1,
+  "thorax_alarm":0,
+  "pelvis_alarm":0,
+  "thorax_ext_alarm":0,
+  "fidgetings_alarm":0,
+  "leaning_forward_alarm": 0,
+  "dissymetry_alarm":0,
+  "feet_on_dashboard_alarm":0,
+  "asana_status": 0,
+  "safe_unsafe": 0,
+  "driving_mode": 0,
+  "sensors_avg": [0,0,0,0,0,0,0,0]
+}

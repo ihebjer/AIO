@@ -1,0 +1,26 @@
+host: '127.0.0.1'
+port: 5342
+
+seat_data:
+  TeslaM:
+    SeatName: 'Modular Tesla'
+    sensor_numbers_backrest: 4
+    SensorNumbersCushion: 6
+    CushionWidth: '20 CM'
+    FoamMaterial: 'Traditional polyurethane'
+    CushionFoamThickness: '20 CM'
+    BackrestFoamThickness: '20 CM'
+    BolsterCoverMaterial: 'Leather'
+    CushionCoverMaterial: 'Leather'
+    BackrestCoverMaterial: 'Leather'
+  P8:
+    SeatName: 'Peugeot'
+    sensor_numbers_backrest: 4
+    SensorNumbersCushion: 4
+    CushionWidth: '12 CM'
+    FoamMaterial: 'Auraloop'
+    CushionFoamThickness: '12 CM'
+    BackrestFoamThickness: '12 CM'
+    BolsterCoverMaterial: 'NORMAL'
+    CushionCoverMaterial: 'NORMAL'
+    BackrestCoverMaterial: 'NORMAL'
