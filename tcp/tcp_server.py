@@ -3,16 +3,14 @@ import json
 import time
 from threading import Thread
 
-aio_data_template   = "C:\\Users\\ijeridi\\Documents\\gui\\tcp\\aio_data.json"
+aio_data_template   = "/home/ihebjeridi/Documents/app - OOP/app_acquisation/tcp/aio_data.json"
 host                = '127.0.0.1'
 port                = 5342
-interval            = 0.1  # Interval in seconds every <interval>s data is sent to clients
-
+interval            = 0.1  
 def read_json_file(file_path):
     with open(file_path, 'r') as file:
         data = json.load(file)
     return data
-
 class TCPServer:
     MSG_DELIMITER = '\n'
     def __init__(self, host, port, data_template_path, interval=0.1):

@@ -4,12 +4,38 @@ import json
 import serial
 import csv
 import socket
+import sys
+sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
 import time
 from threading import Thread
 import yaml
+from CouchbaseLite.Document import MutableDocument
+from CouchbaseLite.Database import Database, DatabaseConfiguration
+import os
+import uuid
 
+
+class DatabaseManager:
+    def __init__(self):
+        self.db_path = "/home/ihebjeridi/Documents/app - OOP/app_acquisation"
+        self.db_name = "python_db"
+        
+        if self.database_exists():
+            self.db = Database(self.db_name, DatabaseConfiguration(self.db_path))
+            print(f"Database '{self.db_name}' already exists.")
+        else:
+            self.db = Database(self.db_name, DatabaseConfiguration(self.db_path))
+            print(f"Database '{self.db_name}' created successfully.")
+    
+    def database_exists(self):
+        db_file_path = os.path.join(self.db_path, f"{self.db_name}.cblite2")  
+        return os.path.exists(db_file_path)
+
+
+    
 class App:
     def __init__(self, root):
+        self.db_manager = DatabaseManager()  #
         self.load_config('config.yaml')
         self.root = root
         self.root.title("FORVIA DATA ACQUISITION")
@@ -21,23 +47,19 @@ class App:
             "seat_positioning": {} ,
             "sensors": {},
             "environment": {},
-            # Initialize for seat positioning data
         }
         self.sensor_data = []
         self.tabControl = ttk.Notebook(root)
-
-        # Create Tabs
         self.occupant_tab = ttk.Frame(self.tabControl)
         self.seat_tab = ttk.Frame(self.tabControl)
-        self.positioning_tab = ttk.Frame(self.tabControl)  # New tab for seat positioning
+        self.positioning_tab = ttk.Frame(self.tabControl)  
         self.sensor_tab = ttk.Frame(self.tabControl)
         self.environment_tab = ttk.Frame(self.tabControl)
         self.send_tab = ttk.Frame(self.tabControl)
 
-        # Add Tabs to Notebook
         self.tabControl.add(self.occupant_tab, text="Occupant")
         self.tabControl.add(self.seat_tab, text="Seat details")
-        self.tabControl.add(self.positioning_tab, text="Seat Positioning")  # Added tab
+        self.tabControl.add(self.positioning_tab, text="Seat Positioning") 
         self.tabControl.add(self.sensor_tab, text="Sensors")
         self.tabControl.add(self.environment_tab, text="Environment")
         self.tabControl.add(self.send_tab, text="Send")
@@ -45,7 +67,7 @@ class App:
         self.tabControl.pack(expand=1, fill="both")
         self.create_occupant_tab()
         self.create_seat_tab()
-        self.create_positioning_tab()  # Create the positioning tab
+        self.create_positioning_tab()  
         self.create_sensor_tab()
         self.create_environment_tab()
         self.create_send_tab()
@@ -55,7 +77,8 @@ class App:
         self.current_position = 0
         self.logging = False
         self.log_thread = None 
-
+        self.test_counts = {} 
+        
     def load_config(self, file_path):
         with open(file_path, 'r') as file:
             config = yaml.safe_load(file)
@@ -71,7 +94,7 @@ class App:
             tab.grid_columnconfigure(j, weight=1)
 
     def create_occupant_tab(self):
-        labels = ["ID_Occupant", "Age", "Weight", "Height", "Gender", "Ocuppant Classification"]
+        labels = ["ID_Occupant","Name", "Age", "Weight", "Height", "Gender", "Ocuppant Classification"]
         self.configure_grid(self.occupant_tab, len(labels) + 1, 2)
         self.occupant_entries = {}
         for i, label in enumerate(labels):
@@ -88,7 +111,7 @@ class App:
         self.occupant_entries["Height"].bind("<KeyRelease>", self.update_weight_class)
 
         style = ttk.Style()
-        style.configure("TButton", foreground="black", background="blue")
+        style.configure("TButton", foreground="white", background="blue")
 
         ttk.Button(self.occupant_tab, text="Save", command=self.save_occupant, style="TButton").grid(row=len(labels), column=0, columnspan=2, pady=10)
         
@@ -135,8 +158,22 @@ class App:
             messagebox.showerror("Input Error", str(e))
             return
         
-        self.data["occupants"] = {label: entry.get() for label, entry in self.occupant_entries.items()}
-        print("Occupant data saved:", self.data["occupants"])
+        occupant_data = {label: entry.get() for label, entry in self.occupant_entries.items()}
+        document_id = f"{occupant_data['ID_Occupant']}"
+        occupant_doc = MutableDocument(document_id)
+        for key, value in occupant_data.items():
+            occupant_doc[key] = value
+        
+        try:
+            self.db_manager.db.saveDocument(occupant_doc)
+            print(f"Occupant document saved with ID: {document_id}")
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Failed to save occupant data: {str(e)}")
+
+        for entry in self.occupant_entries.values():
+            entry.delete(0, tk.END)  
+
+        messagebox.showinfo("Success", f"Occupant data for '{document_id}' has been saved and cleared.")
 
     def create_seat_tab(self):
         self.seat_entries = {
@@ -178,8 +215,34 @@ class App:
                 self.seat_entries[field].delete(0, tk.END)
 
     def save_seat(self):
-        self.data["seat_details"] = {label: entry.get() for label, entry in self.seat_entries.items()}
-        print("Seat data saved:", self.data["seat_details"])
+        seat_id = self.seat_entries["SeatID"].get()
+        
+        if self.db_manager.db.getDocument(seat_id) is not None:
+            print(f"Error: Seat with ID '{seat_id}' already exists in the database.")
+            raise Exception(f"Seat with ID '{seat_id}' is already saved in the database.")
+        
+        doc = MutableDocument(seat_id)
+        doc["SeatName"] = self.seat_entries["SeatName"].get()
+        doc["sensor_numbers_backrest"] = self.seat_entries["sensor_numbers_backrest"].get()
+        doc["SensorNumbersCushion"] = self.seat_entries["SensorNumbersCushion"].get()
+        doc["CushionWidth"] = self.seat_entries["CushionWidth"].get()
+        doc["FoamMaterial"] = self.seat_entries["FoamMaterial"].get()
+        doc["CushionFoamThickness"] = self.seat_entries["CushionFoamThickness"].get()
+        doc["BackrestFoamThickness"] = self.seat_entries["BackrestFoamThickness"].get()
+        doc["BolsterCoverMaterial"] = self.seat_entries["BolsterCoverMaterial"].get()
+        doc["CushionCoverMaterial"] = self.seat_entries["CushionCoverMaterial"].get()
+        doc["BackrestCoverMaterial"] = self.seat_entries["BackrestCoverMaterial"].get()
+
+        try:
+            self.db_manager.db.saveDocument(doc)
+            print(f"Seat data with ID '{seat_id}' saved to database:", doc)
+        except Exception as e:
+            print("Error saving seat data:", e)
+            
+        for entry in self.seat_entries.values():
+            entry.delete(0, tk.END)  
+
+        messagebox.showinfo("Success", f"Seat data for '{seat_id}' has been saved and cleared.")
 
     def create_sensor_tab(self):
         self.sensor_labels = [f"Sensor {i + 1}" for i in range(10)]
@@ -237,14 +300,15 @@ class App:
         button_frame = ttk.Frame(self.send_tab)
         button_frame.pack(expand=True)
         ttk.Button(button_frame, text="Submit", command=self.submit_all, style="TButton").pack(side=tk.LEFT, padx=20, pady=10)
-        ttk.Button(button_frame, text="Cancel", command=self.cancel_all, style="TButton").pack(side=tk.LEFT, padx=20, pady=10)
-        self.image = tk.PhotoImage(file="C:\\Users\\ijeridi\\Documents\\gui\\images\\faurecia_logo-removebg-preview.png")  
+        ttk.Button(button_frame, text="Clear Data", command=self.clear_all, style="TButton").pack(side=tk.LEFT, padx=20, pady=10)
+        self.image = tk.PhotoImage(file="/home/ihebjeridi/Documents/app - OOP/app_acquisation/images/faurecia_logo-removebg-preview.png")  
         image_label = tk.Label(self.send_tab, image=self.image)
         image_label.pack(side=tk.BOTTOM, pady=40)
 
     def create_positioning_tab(self):
-        # Create entries for each seat positioning attribute
         self.positioning_entries = {
+            "SeatID": tk.Entry(self.positioning_tab),  
+            "OccupantID": tk.Entry(self.positioning_tab),  
             "Backrest": tk.Entry(self.positioning_tab),
             "CushionTilt": tk.Entry(self.positioning_tab),
             "Track": tk.Entry(self.positioning_tab),
@@ -252,7 +316,6 @@ class App:
             "Uba": tk.Entry(self.positioning_tab),
         }
 
-        # Configure the grid and populate the positioning tab
         self.configure_grid(self.positioning_tab, len(self.positioning_entries) + 1, 2)
         row = 0
         for label, entry in self.positioning_entries.items():
@@ -260,23 +323,22 @@ class App:
             entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
             row += 1
 
-        # Add a Save button
         ttk.Button(self.positioning_tab, text="Save", command=self.save_positioning_data, style="TButton").grid(row=row, column=0, columnspan=2, pady=10)
+
 
     def save_positioning_data(self):
         try:
-            # Validate numeric input for Backrest, CushionTilt, Track, Height, Uba
             for field in ["Backrest", "CushionTilt", "Track", "Height", "Uba"]:
                 value = float(self.positioning_entries[field].get())
                 if value < 0:
                     raise ValueError(f"{field} must be a positive float.")
+            self.data["seat_positioning"] = {
+                **{label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
+            }
+            print("Seat positioning data saved:", self.data["seat_positioning"])
+
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
-            return
-        
-        # Save the seat positioning data into the main data structure
-        self.data["seat_positioning"] = {label: entry.get() for label, entry in self.positioning_entries.items()}
-        print("Seat positioning data saved:", self.data["seat_positioning"])
 
     def read_from_serial(self):
         try:
@@ -390,21 +452,66 @@ class App:
         print("Environment data saved:", self.data["environment"])
 
     def submit_all(self):
-        self.data["sensors"] = self.sensor_data
-        with open('database_schema.json', 'w') as f:
-            json.dump(self.data, f, indent=4)
-        print("All data saved to the file 'database_schema.json'.")
+        try:
+            occupant_id = self.positioning_entries["OccupantID"].get()  
+            seat_id = self.positioning_entries["SeatID"].get()  
+            
+            if not occupant_id or not seat_id:
+                raise ValueError("Occupant ID and Seat ID are required for submission.")
 
-    def cancel_all(self):
-        self.data = {
-            "occupants": {},
-            "seat_details": {},
-            "sensors": {},
-            "environment": {},
-            "seat_positioning": {}  # Clear seat positioning data too
-        }
-        self.sensor_data.clear() 
-        print("Data has been cleared.")
+            occupant_doc = self.db_manager.db.getDocument(occupant_id)
+            
+            if not occupant_doc:
+                raise ValueError(f"No occupant found with ID: {occupant_id}")
+
+            if occupant_id in self.test_counts:
+                self.test_counts[occupant_id] += 1  
+            else:
+                self.test_counts[occupant_id] = 1 
+
+            document_id = f"occupant-{occupant_id}--Rep{self.test_counts[occupant_id]}"
+
+            
+            seat_positioning_data = {label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
+            
+            self.data["seat_positioning"] = seat_positioning_data
+            self.data["sensors"] = self.sensor_data
+            self.data["environment"] = {label: entry.get() for label, entry in self.environment_entries.items()}
+
+            doc = MutableDocument(document_id)
+            doc["seat_positioning"] = self.data["seat_positioning"]
+            doc["sensors"] = self.data["sensors"]
+            doc["environment"] = self.data["environment"]
+            doc["test_count"] = self.test_counts[occupant_id]  
+            doc["SeatID"] = seat_id  
+            doc["OccupantID"] = occupant_id  
+
+            self.db_manager.db.saveDocument(doc)
+            print(f"Test data saved successfully with ID: {document_id}")
+
+        except ValueError as e:
+            messagebox.showerror("Submission Error", str(e))
+            return
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Error saving document: {str(e)}")
+            return
+
+
+        messagebox.showinfo("Success", "All test data has been successfully submitted and saved.")
+
+            
+    def clear_all(self):
+        self.data.clear()
+        self.sensor_data = []
+
+        for entry in self.positioning_entries.values():
+            entry.delete(0, tk.END)
+
+        for entry in self.environment_entries.values():
+            entry.delete(0, tk.END)
+            
+        messagebox.showinfo("Success", "All data and entry fields have been cleared")
+
 
     def tcp_reader(self, data):
         try:
