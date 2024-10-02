@@ -104,8 +104,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         is_main_loop = False
         server.is_server_active = False
-
-
-
-
-

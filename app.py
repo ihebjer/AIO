@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import json
-import serial
+#import serial
 import csv
 import socket
 import sys
@@ -9,29 +9,39 @@ sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
 import time
 from threading import Thread
 import yaml
+from CouchbaseLite.Collection import CollectionByName,SaveDocumentByCollection
 from CouchbaseLite.Document import MutableDocument
 from CouchbaseLite.Database import Database, DatabaseConfiguration
 import os
 import uuid
 
+DB_PATH = "/home/ihebjeridi/Documents/app - OOP/app_acquisation"
+DB_NAME = "AIO_DB"
 
 class DatabaseManager:
     def __init__(self):
-        self.db_path = "/home/ihebjeridi/Documents/app - OOP/app_acquisation"
-        self.db_name = "python_db"
-        
+        self.db = None
         if self.database_exists():
-            self.db = Database(self.db_name, DatabaseConfiguration(self.db_path))
-            print(f"Database '{self.db_name}' already exists.")
+            self.db = Database(DB_NAME, DatabaseConfiguration(DB_PATH))
+            print(f"Database '{DB_NAME}' already exists.")
         else:
-            self.db = Database(self.db_name, DatabaseConfiguration(self.db_path))
-            print(f"Database '{self.db_name}' created successfully.")
-    
-    def database_exists(self):
-        db_file_path = os.path.join(self.db_path, f"{self.db_name}.cblite2")  
+            self.db = Database(DB_NAME, DatabaseConfiguration(DB_PATH))
+            print(f"Database '{DB_NAME}' created successfully.")
+        self.occupant_collection = self.create_occupant_collection()
+        self.document_manager = SaveDocumentByCollection(self.occupant_collection)
+
+    def database_exists(self) -> bool:
+        db_file_path = os.path.join(DB_PATH, f"{DB_NAME}.cblite2")  
         return os.path.exists(db_file_path)
 
-
+    def create_occupant_collection(self):
+        try:
+            collection = CollectionByName(self.db, "Occupant", "_default")
+            print("Occupant collection is ready for use.")
+            return collection
+        except Exception as e:
+            print(f"Error accessing occupant collection: {str(e)}")
+            return None
     
 class App:
     def __init__(self, root):
@@ -39,7 +49,7 @@ class App:
         self.load_config('config.yaml')
         self.root = root
         self.root.title("FORVIA DATA ACQUISITION")
-        self.root.geometry("800x600")
+        self.root.geometry("1000x700")
         self.root.resizable(True, False)
         self.data = {
             "occupants": {},
@@ -111,7 +121,7 @@ class App:
         self.occupant_entries["Height"].bind("<KeyRelease>", self.update_weight_class)
 
         style = ttk.Style()
-        style.configure("TButton", foreground="white", background="blue")
+        style.configure("TButton", foreground="white", background="black")
 
         ttk.Button(self.occupant_tab, text="Save", command=self.save_occupant, style="TButton").grid(row=len(labels), column=0, columnspan=2, pady=10)
         
@@ -159,7 +169,7 @@ class App:
             return
         
         occupant_data = {label: entry.get() for label, entry in self.occupant_entries.items()}
-        document_id = f"{occupant_data['ID_Occupant']}"
+        document_id = f"Occupant_{occupant_data['ID_Occupant']}"
         occupant_doc = MutableDocument(document_id)
         for key, value in occupant_data.items():
             occupant_doc[key] = value
@@ -328,10 +338,26 @@ class App:
 
     def save_positioning_data(self):
         try:
+            occupant_id = self.positioning_entries["OccupantID"].get()  
+            seat_id = self.positioning_entries["SeatID"].get()  
+
+            if not occupant_id or not seat_id:
+                raise ValueError("Occupant ID and Seat ID are required.")
+
+            occupant_doc_id = f"Occupant_{occupant_id}"  
+            occupant_doc = self.db_manager.db.getDocument(occupant_doc_id)
+            if not occupant_doc:
+                raise ValueError(f"No occupant found with ID: {occupant_id}")
+
+            seat_doc = self.db_manager.db.getDocument(seat_id)
+            if not seat_doc:
+                raise ValueError(f"No seat found with ID: {seat_id}")
+
             for field in ["Backrest", "CushionTilt", "Track", "Height", "Uba"]:
                 value = float(self.positioning_entries[field].get())
                 if value < 0:
                     raise ValueError(f"{field} must be a positive float.")
+
             self.data["seat_positioning"] = {
                 **{label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
             }
@@ -339,6 +365,8 @@ class App:
 
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Error accessing database: {str(e)}")
 
     def read_from_serial(self):
         try:
@@ -459,19 +487,22 @@ class App:
             if not occupant_id or not seat_id:
                 raise ValueError("Occupant ID and Seat ID are required for submission.")
 
-            occupant_doc = self.db_manager.db.getDocument(occupant_id)
-            
+            occupant_doc_id = f"Occupant_{occupant_id}"  
+
+            occupant_doc = self.db_manager.db.getDocument(occupant_doc_id)             
             if not occupant_doc:
                 raise ValueError(f"No occupant found with ID: {occupant_id}")
 
+            props = occupant_doc.properties
+            occupant_name = props.get("Name", "Unknown")  
+            
             if occupant_id in self.test_counts:
                 self.test_counts[occupant_id] += 1  
             else:
                 self.test_counts[occupant_id] = 1 
 
-            document_id = f"occupant-{occupant_id}--Rep{self.test_counts[occupant_id]}"
+            document_id = f"{occupant_name}_{occupant_id}[Rep{self.test_counts[occupant_id]}]"
 
-            
             seat_positioning_data = {label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
             
             self.data["seat_positioning"] = seat_positioning_data
@@ -496,7 +527,6 @@ class App:
             messagebox.showerror("Database Error", f"Error saving document: {str(e)}")
             return
 
-
         messagebox.showinfo("Success", "All test data has been successfully submitted and saved.")
 
             
@@ -512,12 +542,12 @@ class App:
             
         messagebox.showinfo("Success", "All data and entry fields have been cleared")
 
-
     def tcp_reader(self, data):
         try:
             data = json.loads(data)
             if 'offset' in data and isinstance(data['offset'], list):
-                self.offset_data = data['offset']  # 
+                self.offset_data = data['offset']  
+                print(f"Received asana_offset: {self.offset_data}")  # Print the received offsets
             else:
                 print("Received TCP data does not contain valid offset values.")
         except json.JSONDecodeError as e:
@@ -546,6 +576,7 @@ class Client:
     def stop(self):
         self.receive_flag = False
         self.sock.close()
+
 
 if __name__ == "__main__":
     root = tk.Tk()

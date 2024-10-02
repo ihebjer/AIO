@@ -8,7 +8,7 @@ from CouchbaseLite.Database import Database, DatabaseConfiguration
 
 
 db_path = "/home/ihebjeridi/Documents/app - OOP/app_acquisation"
-db_name = "python_db"
+db_name = "AIO_DB"
 
 def read_document(doc_id):
     config = DatabaseConfiguration(db_path)
@@ -21,7 +21,7 @@ def read_document(doc_id):
         for key, value in props.items():
             print(f"{key}: {value}")
         
-        json_file_path = f"{doc_id}.json"
+        json_file_path = f"/home/ihebjeridi/Documents/app - OOP/app_acquisation/data/{doc_id}.json"
         with open(json_file_path, 'w') as json_file:
             json.dump(props, json_file, indent=4)
         print(f"Document data saved to '{json_file_path}'.")

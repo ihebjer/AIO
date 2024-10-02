@@ -1,5 +1,5 @@
 host: '127.0.0.1'
-port: 5342
+port: 5430
 
 seat_data:
   TeslaM:

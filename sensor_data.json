@@ -1,6 +1,6 @@
 [
     {
-        "timestamp": "18:25:32",
+        "timestamp": "10:34:12",
         "position": 1,
         "status": "Empty",
         "out_of_position": "Nominal position",
@@ -16,7 +16,7 @@
         "Sensor 10": 1
     },
     {
-        "timestamp": "18:25:32",
+        "timestamp": "10:34:12",
         "position": 1,
         "status": "Empty",
         "out_of_position": "Nominal position",
@@ -32,7 +32,7 @@
         "Sensor 10": 1
     },
     {
-        "timestamp": "18:25:32",
+        "timestamp": "10:34:12",
         "position": 1,
         "status": "Empty",
         "out_of_position": "Nominal position",
@@ -48,10 +48,10 @@
         "Sensor 10": 1
     },
     {
-        "timestamp": "18:25:32",
+        "timestamp": "10:34:16",
         "position": 1,
         "status": "Empty",
-        "out_of_position": "Nominal position",
+        "out_of_position": "Foot underneath",
         "Sensor 1": 1,
         "Sensor 2": 1,
         "Sensor 3": 1,
@@ -64,10 +64,10 @@
         "Sensor 10": 1
     },
     {
-        "timestamp": "18:25:32",
+        "timestamp": "10:34:17",
         "position": 1,
         "status": "Empty",
-        "out_of_position": "Nominal position",
+        "out_of_position": "Foot underneath",
         "Sensor 1": 1,
         "Sensor 2": 1,
         "Sensor 3": 1,
@@ -80,42 +80,10 @@
         "Sensor 10": 1
     },
     {
-        "timestamp": "18:25:35",
+        "timestamp": "10:34:17",
         "position": 1,
         "status": "Empty",
-        "out_of_position": "Pretzel",
-        "Sensor 1": 1,
-        "Sensor 2": 1,
-        "Sensor 3": 1,
-        "Sensor 4": 1,
-        "Sensor 5": 1,
-        "Sensor 6": 1,
-        "Sensor 7": 1,
-        "Sensor 8": 1,
-        "Sensor 9": 1,
-        "Sensor 10": 1
-    },
-    {
-        "timestamp": "18:25:35",
-        "position": 1,
-        "status": "Empty",
-        "out_of_position": "Pretzel",
-        "Sensor 1": 1,
-        "Sensor 2": 1,
-        "Sensor 3": 1,
-        "Sensor 4": 1,
-        "Sensor 5": 1,
-        "Sensor 6": 1,
-        "Sensor 7": 1,
-        "Sensor 8": 1,
-        "Sensor 9": 1,
-        "Sensor 10": 1
-    },
-    {
-        "timestamp": "18:25:36",
-        "position": 1,
-        "status": "Empty",
-        "out_of_position": "Pretzel",
+        "out_of_position": "Foot underneath",
         "Sensor 1": 1,
         "Sensor 2": 1,
         "Sensor 3": 1,
