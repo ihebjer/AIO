@@ -1,49 +1,20 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import json
-#import serial
-import csv
-import socket
-import sys
-sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
 import time
+import uuid
 from threading import Thread
 import yaml
+import sys
+sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
 from CouchbaseLite.Document import MutableDocument
-from CouchbaseLite.Database import Database, DatabaseConfiguration
-import os
-import uuid
+from database_manager import DatabaseManager
+from client import Client
 
-DB_PATH = "/home/ihebjeridi/Documents/app - OOP/app_acquisation"
-DB_NAME = "AIO_DB"
 
-class DatabaseManager:
-    def __init__(self):
-        self.db = None
-        if self.database_exists():
-            self.db = Database(DB_NAME, DatabaseConfiguration(DB_PATH))
-            print(f"Database '{DB_NAME}' already exists.")
-        else:
-            self.db = Database(DB_NAME, DatabaseConfiguration(DB_PATH))
-            print(f"Database '{DB_NAME}' created successfully.")
-        #self.occupant_collection = self.create_occupant_collection()
-
-    def database_exists(self) -> bool:
-        db_file_path = os.path.join(DB_PATH, f"{DB_NAME}.cblite2")  
-        return os.path.exists(db_file_path)
-
-"""    def create_occupant_collection(self):
-        try:
-            collection = CollectionByName(self.db, "Occupant", "_default")
-            print("Occupant collection is ready for use.")
-            return collection
-        except Exception as e:
-            print(f"Error accessing occupant collection: {str(e)}")
-            return None
-    """
 class App:
     def __init__(self, root):
-        self.db_manager = DatabaseManager()  #
+        self.db_manager = DatabaseManager()  
         self.load_config('config.yaml')
         self.root = root
         self.root.title("FORVIA DATA ACQUISITION")
@@ -57,7 +28,16 @@ class App:
             "environment": {},
         }
         self.sensor_data = []
-        self.tabControl = ttk.Notebook(root)
+        self.create_tabs()
+        self.tcp_client = Client(host=self.host, port=self.port, reader=self.tcp_reader)
+        self.offset_data = None
+        self.current_position = 0
+        self.logging = False
+        self.log_thread = None 
+        self.test_counts = {}
+
+    def create_tabs(self):
+        self.tabControl = ttk.Notebook(self.root)
         self.occupant_tab = ttk.Frame(self.tabControl)
         self.seat_tab = ttk.Frame(self.tabControl)
         self.positioning_tab = ttk.Frame(self.tabControl)  
@@ -80,13 +60,6 @@ class App:
         self.create_environment_tab()
         self.create_send_tab()
 
-        self.tcp_client = Client(host=self.host, port=self.port, reader=self.tcp_reader)
-        self.offset_data = None
-        self.current_position = 0
-        self.logging = False
-        self.log_thread = None 
-        self.test_counts = {} 
-        
     def load_config(self, file_path):
         with open(file_path, 'r') as file:
             config = yaml.safe_load(file)
@@ -479,12 +452,9 @@ class App:
             props = occupant_doc.properties
             occupant_name = props.get("Name", "Unknown")  
             
-            if occupant_id in self.test_counts:
-                self.test_counts[occupant_id] += 1  
-            else:
-                self.test_counts[occupant_id] = 1 
+            short_uuid = str(uuid.uuid4())[:8]  
 
-            document_id = f"{occupant_name}_{occupant_id}[Rep{self.test_counts[occupant_id]}]"
+            document_id = f"{occupant_name}_{occupant_id}_{short_uuid}"
 
             seat_positioning_data = {label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
             
@@ -496,7 +466,6 @@ class App:
             doc["seat_positioning"] = self.data["seat_positioning"]
             doc["sensors"] = self.data["sensors"]
             doc["environment"] = self.data["environment"]
-            doc["test_count"] = self.test_counts[occupant_id]  
             doc["SeatID"] = seat_id  
             doc["OccupantID"] = occupant_id  
 
@@ -542,36 +511,4 @@ class App:
             print("Received invalid JSON:", data)
             print("Error:", e)
 
-class Client:
-    def __init__(self, host, port, reader: callable = None):
-        self.sock = socket.socket()
-        self.sock.connect((host, port))
-        self.receive_flag = True
-        self.reader = reader
-        self.receive_thread = Thread(target=self.receive)
-        self.receive_thread.start()
 
-    def receive(self):
-        while self.receive_flag:
-            try:
-                data = self.sock.recv(2048).decode()
-                if self.reader and data:
-                    self.reader(data)
-                time.sleep(0.01)
-            except Exception as e:
-                print(f"Error receiving data: {e}")
-
-    def stop(self):
-        self.receive_flag = False
-        self.sock.close()
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = App(root)
-
-    try:
-        root.mainloop()
-    except KeyboardInterrupt:
-        print("Application terminated.")
-        app.tcp_client.stop()
