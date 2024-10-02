@@ -9,7 +9,6 @@ sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
 import time
 from threading import Thread
 import yaml
-from CouchbaseLite.Collection import CollectionByName,SaveDocumentByCollection
 from CouchbaseLite.Document import MutableDocument
 from CouchbaseLite.Database import Database, DatabaseConfiguration
 import os
@@ -27,14 +26,13 @@ class DatabaseManager:
         else:
             self.db = Database(DB_NAME, DatabaseConfiguration(DB_PATH))
             print(f"Database '{DB_NAME}' created successfully.")
-        self.occupant_collection = self.create_occupant_collection()
-        self.document_manager = SaveDocumentByCollection(self.occupant_collection)
+        #self.occupant_collection = self.create_occupant_collection()
 
     def database_exists(self) -> bool:
         db_file_path = os.path.join(DB_PATH, f"{DB_NAME}.cblite2")  
         return os.path.exists(db_file_path)
 
-    def create_occupant_collection(self):
+"""    def create_occupant_collection(self):
         try:
             collection = CollectionByName(self.db, "Occupant", "_default")
             print("Occupant collection is ready for use.")
@@ -42,7 +40,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error accessing occupant collection: {str(e)}")
             return None
-    
+    """
 class App:
     def __init__(self, root):
         self.db_manager = DatabaseManager()  #
@@ -227,32 +225,39 @@ class App:
     def save_seat(self):
         seat_id = self.seat_entries["SeatID"].get()
         
-        if self.db_manager.db.getDocument(seat_id) is not None:
-            print(f"Error: Seat with ID '{seat_id}' already exists in the database.")
-            raise Exception(f"Seat with ID '{seat_id}' is already saved in the database.")
+        if not seat_id:
+            raise ValueError("Seat ID is required.")
         
-        doc = MutableDocument(seat_id)
-        doc["SeatName"] = self.seat_entries["SeatName"].get()
-        doc["sensor_numbers_backrest"] = self.seat_entries["sensor_numbers_backrest"].get()
-        doc["SensorNumbersCushion"] = self.seat_entries["SensorNumbersCushion"].get()
-        doc["CushionWidth"] = self.seat_entries["CushionWidth"].get()
-        doc["FoamMaterial"] = self.seat_entries["FoamMaterial"].get()
-        doc["CushionFoamThickness"] = self.seat_entries["CushionFoamThickness"].get()
-        doc["BackrestFoamThickness"] = self.seat_entries["BackrestFoamThickness"].get()
-        doc["BolsterCoverMaterial"] = self.seat_entries["BolsterCoverMaterial"].get()
-        doc["CushionCoverMaterial"] = self.seat_entries["CushionCoverMaterial"].get()
-        doc["BackrestCoverMaterial"] = self.seat_entries["BackrestCoverMaterial"].get()
-
         try:
+            if self.db_manager.db.getDocument(seat_id) is not None:
+                raise ValueError(f"Seat with ID '{seat_id}' already exists in the database.")
+            
+            doc = MutableDocument(seat_id)
+            
+            fields = [
+                "SeatName", "sensor_numbers_backrest", "SensorNumbersCushion", 
+                "CushionWidth", "FoamMaterial", "CushionFoamThickness", 
+                "BackrestFoamThickness", "BolsterCoverMaterial", 
+                "CushionCoverMaterial", "BackrestCoverMaterial"
+            ]
+            
+            for field in fields:
+                doc[field] = self.seat_entries[field].get()
+
             self.db_manager.db.saveDocument(doc)
             print(f"Seat data with ID '{seat_id}' saved to database:", doc)
-        except Exception as e:
-            print("Error saving seat data:", e)
-            
-        for entry in self.seat_entries.values():
-            entry.delete(0, tk.END)  
 
-        messagebox.showinfo("Success", f"Seat data for '{seat_id}' has been saved and cleared.")
+            for entry in self.seat_entries.values():
+                entry.delete(0, tk.END)
+            
+            messagebox.showinfo("Success", f"Seat data for '{seat_id}' has been saved and cleared.")
+
+        except ValueError as ve:
+            messagebox.showerror("Input Error", str(ve))
+            print(str(ve))
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Error saving seat data: {str(e)}")
+            print("Error saving seat data:", e)
 
     def create_sensor_tab(self):
         self.sensor_labels = [f"Sensor {i + 1}" for i in range(10)]
@@ -290,8 +295,7 @@ class App:
         self.save_button = ttk.Button(button_frame, text="Save", command=self.save_sensor_data, style="TButton")
         self.save_button.grid(row=0, column=2, padx=10)
 
-        ttk.Button(button_frame, text="Read from Serial", command=self.read_from_serial, style="TButton").grid(row=0, column=3, padx=10)
-        ttk.Button(button_frame, text="Import from CSV", command=self.import_from_csv, style="TButton").grid(row=0, column=4, padx=10)
+        
 
     def create_environment_tab(self):
         self.environment_entries = {
@@ -368,29 +372,6 @@ class App:
         except Exception as e:
             messagebox.showerror("Database Error", f"Error accessing database: {str(e)}")
 
-    def read_from_serial(self):
-        try:
-            ser = serial.Serial('COM3', 9600)
-            line = ser.readline().decode('utf-8').strip()
-            ser.close()
-            sensor_data = line.split(',')
-            if len(sensor_data) == 10:  
-                for i, label in enumerate(self.sensor_labels):
-                    self.sensor_entries[label].config(text=sensor_data[i])
-        except Exception as e:
-            print(f"Error ::::::: reading from serial port: {e}")
-
-    def import_from_csv(self):
-        from tkinter import filedialog
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-        if file_path:
-            with open(file_path, 'r') as csvfile:
-                reader = csv.reader(csvfile)
-                for row in reader:
-                    if len(row) == 10: 
-                        for i, label in enumerate(self.sensor_labels):
-                            self.sensor_entries[label].config(text=row[i]) 
-
     def start_test(self):
         
         if not self.out_of_position_entry.get():
@@ -427,8 +408,9 @@ class App:
         while self.logging:
             timestamp = time.strftime("%H:%M:%S")  
             current_out_of_position = self.out_of_position_entry.get()  
+            
             sensor_values = {label: self.offset_data[i] for i, label in enumerate(self.sensor_labels)}
-
+            
             self.sensor_data.append({
                 "timestamp": timestamp,
                 "position": self.current_position + 1,
@@ -437,9 +419,10 @@ class App:
                 **sensor_values
             })
 
-            print("Logged data:", self.sensor_data[-1])  
-            time.sleep(0.2)  
-            
+            for label in self.sensor_labels:
+                self.sensor_entries[label].config(text=str(sensor_values[label]))  
+
+                
     def update_timer(self):
         while self.logging:
             if self.start_time is not None:
@@ -539,15 +522,20 @@ class App:
 
         for entry in self.environment_entries.values():
             entry.delete(0, tk.END)
-            
+
+        # Clear sensor values
+        for label in self.sensor_labels:
+            self.sensor_entries[label].config(text="0.0")
+
         messagebox.showinfo("Success", "All data and entry fields have been cleared")
+
 
     def tcp_reader(self, data):
         try:
             data = json.loads(data)
             if 'offset' in data and isinstance(data['offset'], list):
                 self.offset_data = data['offset']  
-                print(f"Received asana_offset: {self.offset_data}")  # Print the received offsets
+                #print(f"Received asana_offset: {self.offset_data}")  # Print the received offsets
             else:
                 print("Received TCP data does not contain valid offset values.")
         except json.JSONDecodeError as e:
