@@ -1,7 +1,7 @@
 # check.py
 
 import sys
-sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
+sys.path.append('/home/ihebjeridi/Documents/cbliteUpdated/couchbase-lite-python')
 import json
 from CouchbaseLite.Document import MutableDocument
 from CouchbaseLite.Database import Database, DatabaseConfiguration

@@ -6,8 +6,8 @@ import uuid
 from threading import Thread
 import yaml
 import sys
-sys.path.append('/home/ihebjeridi/Documents/cblite/couchbase-lite-python')
-from CouchbaseLite.Document import MutableDocument
+sys.path.append('/home/ihebjeridi/Documents/cbliteFinal/couchbase-lite-python')
+from CouchbaseLite.Document import MutableDocument,Document
 from database_manager import DatabaseManager
 from client import Client
 
@@ -122,6 +122,48 @@ class App:
         except ValueError:
             self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)  
 
+# def save_occupant(self):
+#     try:
+#         age = int(self.occupant_entries["Age"].get())
+#         if age < 0:
+#             raise ValueError("Age must be a positive integer.")
+        
+#         weight = float(self.occupant_entries["Weight"].get())
+#         height = float(self.occupant_entries["Height"].get())
+#         gender = self.occupant_entries["Gender"].get()
+
+#         if gender not in ["H", "F"]:
+#             raise ValueError("Gender must be 'H' or 'F'.")
+
+#     except ValueError as e:
+#         messagebox.showerror("Input Error", str(e))
+#         return
+
+#     occupant_data = {label: entry.get() for label, entry in self.occupant_entries.items()}
+
+#     document_id = f"{occupant_data['Name']}_{occupant_data['ID_Occupant']}"
+#     doc = Document.createDocWithId(document_id)
+#     try:
+#         occupant_json = occupant_data  
+#         Document.setJSON(doc, occupant_json)  
+#     except Exception as e:
+#         messagebox.showerror("Document Error", f"Failed to create or set JSON on document: {str(e)}")
+#         return
+
+#     occupants_collection = self.db_manager.occupants_collection
+#     if occupants_collection is None:
+#         messagebox.showerror("Collection Error", "The 'Occupants' collection could not be initialized.")
+#         return
+
+#     try:
+#         self.db_manager.save_document(occupants_collection, doc)  
+#         print(f"Occupant document saved with ID: {document_id} in occupants_collection")
+#     except Exception as e:
+#         messagebox.showerror("Save Error", f"Failed to save occupant data: {str(e)}")
+#     for entry in self.occupant_entries.values():
+#         entry.delete(0, tk.END)
+
+#     messagebox.showinfo("Success", f"Occupant data for '{document_id}' has been saved and cleared.")
     def save_occupant(self):
         try:
             age = int(self.occupant_entries["Age"].get())
@@ -238,8 +280,8 @@ class App:
         
         tk.Label(self.sensor_tab, text="Out of Position").grid(row=len(self.sensor_labels), column=0, padx=10, pady=5, sticky="ew")
         self.out_of_position_entry = ttk.Combobox(self.sensor_tab, values=[
-            "Nominal position", "Foot underneath", "Pretzel", 
-            "Hold the knees", "Pelvis drift", "Feet on the dashboard"
+            "Nominal position","Leaning forward", "Dissymetry", 
+            "Pelvis drift", "Feet on the dashboard"
         ])
         self.out_of_position_entry.grid(row=len(self.sensor_labels), column=1, padx=10, pady=5, sticky="ew")
         
@@ -252,9 +294,6 @@ class App:
         for i, label in enumerate(self.sensor_labels):
             tk.Label(self.sensor_tab, text=label).grid(row=i, column=0, padx=10, pady=5, sticky="ew")
             self.sensor_entries[label].grid(row=i, column=1, padx=10, pady=5, sticky="ew")
-
-        self.status_label = tk.Label(self.sensor_tab, text="Status: Not Started")
-        self.status_label.grid(row=len(self.sensor_labels) + 2, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
 
         button_frame = ttk.Frame(self.sensor_tab)
         button_frame.grid(row=len(self.sensor_labels) + 3, column=0, columnspan=2, pady=10)
@@ -358,7 +397,6 @@ class App:
             self.logging = True  
             self.start_time = time.time()  
 
-            self.status_label.config(text="Status: Testing position {}".format(self.current_position + 1))
             self.start_button.config(state=tk.DISABLED)
             self.stop_button.config(state=tk.NORMAL)
             self.save_button.config(state=tk.DISABLED)  
@@ -373,7 +411,6 @@ class App:
         self.start_button.config(state=tk.NORMAL)  
         self.stop_button.config(state=tk.DISABLED)  
         self.save_button.config(state=tk.NORMAL)  
-        self.status_label.config(text="Status: Test stopped. Ready for next position.")
         self.timer_label.config(text="00:00:00") 
         self.start_time = None  
         
@@ -382,12 +419,11 @@ class App:
             timestamp = time.strftime("%H:%M:%S")  
             current_out_of_position = self.out_of_position_entry.get()  
             
-            sensor_values = {label: self.offset_data[i] for i, label in enumerate(self.sensor_labels)}
+            sensor_values = {label: round((self.offset_data[i]), 2)for i, label in enumerate(self.sensor_labels)}
             
             self.sensor_data.append({
                 "timestamp": timestamp,
                 "position": self.current_position + 1,
-                "status": "Empty",
                 "out_of_position": current_out_of_position,
                 **sensor_values
             })
@@ -407,7 +443,6 @@ class App:
         self.start_button.config(state=tk.NORMAL)  
         self.stop_button.config(state=tk.DISABLED)  
         self.save_button.config(state=tk.NORMAL)  
-        self.status_label.config(text="Status: Test stopped. Ready for next position.")
         self.timer_label.config(text="00:00:00")  
         self.start_time = None  
 
