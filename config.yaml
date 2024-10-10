@@ -14,7 +14,7 @@ seat_data:
     CushionCoverMaterial: 'Leather'
     BackrestCoverMaterial: 'Leather'
   P8:
-    SeatName: 'Peugeot'
+    SeatName: 'Peugeot' 
     sensor_numbers_backrest: 4
     SensorNumbersCushion: 4
     CushionWidth: '12 CM'

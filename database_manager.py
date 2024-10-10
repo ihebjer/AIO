@@ -67,7 +67,7 @@ class DatabaseManager:
             return []
         
     def save_document(self, collection, doc):
-        """Save a document in the specified collection."""
+        """Save a document in the specified collection ."""
         try:
             return Collection.save_document(collection, doc)  
         except Exception as e:
