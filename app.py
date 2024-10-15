@@ -6,16 +6,24 @@ import uuid
 from threading import Thread
 import yaml
 import sys
-sys.path.append('/home/ihebjeridi/Documents/cbliteFinal/couchbase-lite-python')
-from CouchbaseLite.Document import MutableDocument,Document
+#sys.path.append('/home/ihebjeridi/Documents/cbliteFinal/couchbase-lite-python')
+#from CouchbaseLite.Document import MutableDocument,Document
+#from CouchbaseLite.Collection import Collection 
 from database_manager import DatabaseManager
 from client import Client
+import os
+
 
 
 class App:
     def __init__(self, root):
-        self.db_manager = DatabaseManager()  
         self.load_config('config.yaml')
+
+        if self.file_managers.get('db', False):
+            self.db_manager = DatabaseManager()  
+        else:
+            self.db_manager = None 
+        
         self.root = root
         self.root.title("FORVIA DATA ACQUISITION")
         self.root.geometry("1000x700")
@@ -67,6 +75,7 @@ class App:
             self.port = config['port']
             global seat_data
             seat_data = config['seat_data']
+            self.file_managers = config.get('file_managers', {'db': False, 'json': True})  # Default to JSON if not specified
 
     def configure_grid(self, tab, rows, columns):
         for i in range(rows):
@@ -105,11 +114,11 @@ class App:
                 self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
                 self.occupant_entries["Ocuppant Classification"].insert(0, "CHILD")
             elif 35 <= weight <= 42 and 128 <= height <= 136:
-                self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
+                self.occupant_entries["Ocuppant Classification"].delete(0   , tk.END)
                 self.occupant_entries["Ocuppant Classification"].insert(0, "GREY ZONE 1")
             elif 46.8 <= weight <= 51.3 and 139.7 <= height <= 160:
                 self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
-                self.occupant_entries["Ocuppant Classification"].insert(0, "5-TH Percentile")
+                self.occupant_entries["Ocuppant Classification"].insert(0, "5-TH Percentile")   
             elif 51.3 <= weight <= 76.3 and 161 <= height <= 172:
                 self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
                 self.occupant_entries["Ocuppant Classification"].insert(0, "GREY ZONE 2")
@@ -121,83 +130,7 @@ class App:
                 self.occupant_entries["Ocuppant Classification"].insert(0, "Not Classified") 
         except ValueError:
             self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)  
-
-# def save_occupant(self):
-#     try:
-#         age = int(self.occupant_entries["Age"].get())
-#         if age < 0:
-#             raise ValueError("Age must be a positive integer.")
-        
-#         weight = float(self.occupant_entries["Weight"].get())
-#         height = float(self.occupant_entries["Height"].get())
-#         gender = self.occupant_entries["Gender"].get()
-
-#         if gender not in ["H", "F"]:
-#             raise ValueError("Gender must be 'H' or 'F'.")
-
-#     except ValueError as e:
-#         messagebox.showerror("Input Error", str(e))
-#         return
-
-#     occupant_data = {label: entry.get() for label, entry in self.occupant_entries.items()}
-
-#     document_id = f"{occupant_data['Name']}_{occupant_data['ID_Occupant']}"
-#     doc = Document.createDocWithId(document_id)
-#     try:
-#         occupant_json = occupant_data  
-#         Document.setJSON(doc, occupant_json)  
-#     except Exception as e:
-#         messagebox.showerror("Document Error", f"Failed to create or set JSON on document: {str(e)}")
-#         return
-
-#     occupants_collection = self.db_manager.occupants_collection
-#     if occupants_collection is None:
-#         messagebox.showerror("Collection Error", "The 'Occupants' collection could not be initialized.")
-#         return
-
-#     try:
-#         self.db_manager.save_document(occupants_collection, doc)  
-#         print(f"Occupant document saved with ID: {document_id} in occupants_collection")
-#     except Exception as e:
-#         messagebox.showerror("Save Error", f"Failed to save occupant data: {str(e)}")
-#     for entry in self.occupant_entries.values():
-#         entry.delete(0, tk.END)
-
-#     messagebox.showinfo("Success", f"Occupant data for '{document_id}' has been saved and cleared.")
-    def save_occupant(self):
-        try:
-            age = int(self.occupant_entries["Age"].get())
-            if age < 0:
-                raise ValueError("Age must be a positive integer.")
             
-            weight = float(self.occupant_entries["Weight"].get())
-            height = float(self.occupant_entries["Height"].get())
-            gender = self.occupant_entries["Gender"].get()
-
-            if gender not in ["H", "F"]:
-                raise ValueError("Gender must be 'H' or 'F'.")
-
-        except ValueError as e:
-            messagebox.showerror("Input Error", str(e))
-            return
-        
-        occupant_data = {label: entry.get() for label, entry in self.occupant_entries.items()}
-        document_id = f"Occupant_{occupant_data['ID_Occupant']}"
-        occupant_doc = MutableDocument(document_id)
-        for key, value in occupant_data.items():
-            occupant_doc[key] = value
-        
-        try:
-            self.db_manager.db.saveDocument(occupant_doc)
-            print(f"Occupant document saved with ID: {document_id}")
-        except Exception as e:
-            messagebox.showerror("Save Error", f"Failed to save occupant data: {str(e)}")
-
-        for entry in self.occupant_entries.values():
-            entry.delete(0, tk.END)  
-
-        messagebox.showinfo("Success", f"Occupant data for '{document_id}' has been saved and cleared.")
-
     def create_seat_tab(self):
         self.seat_entries = {
             "SeatID": tk.Entry(self.seat_tab),
@@ -236,43 +169,7 @@ class App:
         else:
             for field in self.seat_entries:
                 self.seat_entries[field].delete(0, tk.END)
-
-    def save_seat(self):
-        seat_id = self.seat_entries["SeatID"].get()
-        
-        if not seat_id:
-            raise ValueError("Seat ID is required.")
-        
-        try:
-            if self.db_manager.db.getDocument(seat_id) is not None:
-                raise ValueError(f"Seat with ID '{seat_id}' already exists in the database.")
-            
-            doc = MutableDocument(seat_id)
-            
-            fields = [
-                "SeatName", "sensor_numbers_backrest", "SensorNumbersCushion", 
-                "CushionWidth", "FoamMaterial", "CushionFoamThickness", 
-                "BackrestFoamThickness", "BolsterCoverMaterial", 
-                "CushionCoverMaterial", "BackrestCoverMaterial"
-            ]
-            
-            for field in fields:
-                doc[field] = self.seat_entries[field].get()
-
-            self.db_manager.db.saveDocument(doc)
-            print(f"Seat data with ID '{seat_id}' saved to database:", doc)
-
-            for entry in self.seat_entries.values():
-                entry.delete(0, tk.END)
-            
-            messagebox.showinfo("Success", f"Seat data for '{seat_id}' has been saved and cleared.")
-
-        except ValueError as ve:
-            messagebox.showerror("Input Error", str(ve))
-            print(str(ve))
-        except Exception as e:
-            messagebox.showerror("Database Error", f"Error saving seat data: {str(e)}")
-            print("Error saving seat data:", e)
+                
 
     def create_sensor_tab(self):
         self.sensor_labels = [f"Sensor {i + 1}" for i in range(10)]
@@ -280,7 +177,7 @@ class App:
         
         tk.Label(self.sensor_tab, text="Out of Position").grid(row=len(self.sensor_labels), column=0, padx=10, pady=5, sticky="ew")
         self.out_of_position_entry = ttk.Combobox(self.sensor_tab, values=[
-            "Nominal position","Leaning forward", "Dissymetry", 
+            "Empty", "Nominal position","Leaning forward", "Dissymetry", 
             "Pelvis drift", "Feet on the dashboard"
         ])
         self.out_of_position_entry.grid(row=len(self.sensor_labels), column=1, padx=10, pady=5, sticky="ew")
@@ -327,7 +224,7 @@ class App:
         button_frame.pack(expand=True)
         ttk.Button(button_frame, text="Submit", command=self.submit_all, style="TButton").pack(side=tk.LEFT, padx=20, pady=10)
         ttk.Button(button_frame, text="Clear Data", command=self.clear_all, style="TButton").pack(side=tk.LEFT, padx=20, pady=10)
-        self.image = tk.PhotoImage(file="/home/ihebjeridi/Documents/app - OOP/app_acquisation/images/faurecia_logo-removebg-preview.png")  
+        self.image = tk.PhotoImage(file="/home/ihebjeridi/Documents/app_OOP/app_acquisation/images/faurecia_logo-removebg-preview.png")  
         image_label = tk.Label(self.send_tab, image=self.image)
         image_label.pack(side=tk.BOTTOM, pady=40)
 
@@ -351,39 +248,190 @@ class App:
 
         ttk.Button(self.positioning_tab, text="Save", command=self.save_positioning_data, style="TButton").grid(row=row, column=0, columnspan=2, pady=10)
 
+    def save_occupant(self):
+        try:
+            age = int(self.occupant_entries["Age"].get())
+            if age < 0:
+                raise ValueError("Age must be a positive integer.")
+
+            weight = float(self.occupant_entries["Weight"].get())
+            height = float(self.occupant_entries["Height"].get())
+            gender = self.occupant_entries["Gender"].get()
+
+            if gender not in ["H", "F"]:
+                raise ValueError("Gender must be 'H' or 'F'.")
+
+        except ValueError as e:
+            messagebox.showerror("Input Error", str(e))
+            return
+
+        occupant_data = {label: entry.get() for label, entry in self.occupant_entries.items()}
+        document_id = f"Occupant_{occupant_data['ID_Occupant']}"
+
+        if self.file_managers.get('db', False):
+            doc = Document.createDocWithId(document_id)
+            try:
+                occupant_json = occupant_data  
+                Document.setJSON(doc, occupant_json)
+            except Exception as e:
+                messagebox.showerror("Document Error", f"Failed to create or set JSON on document: {str(e)}")
+                return
+
+            occupants_collection = self.db_manager.occupants_collection
+            if occupants_collection is None:
+                messagebox.showerror("Collection Error", "The 'Occupants' collection could not be initialized.")
+                return
+
+            try:
+                self.db_manager.save_document(occupants_collection, doc)  
+                print(f"Occupant document saved with ID: {document_id} in occupants_collection")
+            except Exception as e:
+                messagebox.showerror("Save Error", f"Failed to save occupant data: {str(e)}")
+
+        elif self.file_managers.get('json', False):
+            occupants_folder = "occupants"
+            os.makedirs(occupants_folder, exist_ok=True)  
+            occupant_file_path = os.path.join(occupants_folder, f"{document_id}.json")
+            try:
+                with open(occupant_file_path, 'w') as file:
+                    json.dump(occupant_data, file, indent=4)
+                print(f"Occupant data saved to JSON file: {occupant_file_path}")
+            except Exception as e:
+                messagebox.showerror("File Error", f"Failed to save occupant data to JSON: {str(e)}")
+                return
+
+        for entry in self.occupant_entries.values():
+            entry.delete(0, tk.END)
+
+        messagebox.showinfo("Success", f"Occupant data for '{document_id}' has been saved and cleared.")
+
+
+    def save_seat(self):
+        try:
+            seat_id = self.seat_entries["SeatID"].get()
+            if not seat_id:
+                raise ValueError("Seat ID is required.")
+
+            seat_name = self.seat_entries["SeatName"].get()
+            sensor_numbers_backrest = self.seat_entries["sensor_numbers_backrest"].get()
+            sensor_numbers_cushion = self.seat_entries["SensorNumbersCushion"].get()
+
+            cushion_width = float(self.seat_entries["CushionWidth"].get().replace('CM', '').strip())
+            cushion_foam_thickness = float(self.seat_entries["CushionFoamThickness"].get().replace('CM', '').strip())
+            backrest_foam_thickness = float(self.seat_entries["BackrestFoamThickness"].get().replace('CM', '').strip())
+
+            foam_material = self.seat_entries["FoamMaterial"].get()
+            bolster_cover_material = self.seat_entries["BolsterCoverMaterial"].get()
+            cushion_cover_material = self.seat_entries["CushionCoverMaterial"].get()
+            backrest_cover_material = self.seat_entries["BackrestCoverMaterial"].get()
+
+        except ValueError as e:
+            messagebox.showerror("Input Error", str(e))
+            return
+
+        seat_data = {label: entry.get() for label, entry in self.seat_entries.items()}
+        document_id = f"Seat_{seat_id}"
+
+        if self.file_managers.get('db', False):
+            doc = Document.createDocWithId(document_id)
+            try:
+                seat_json = seat_data  
+                Document.setJSON(doc, seat_json)
+            except Exception as e:
+                messagebox.showerror("Document Error", f"Failed to create or set JSON on document: {str(e)}")
+                return
+
+            seats_collection = self.db_manager.seats_collection
+            if seats_collection is None:
+                messagebox.showerror("Collection Error", "The 'Seats' collection could not be initialized.")
+                return
+
+            try:
+                self.db_manager.save_document(seats_collection, doc)
+                print(f"Seat document saved with ID: {document_id} in seats_collection")
+            except Exception as e:
+                messagebox.showerror("Save Error", f"Failed to save seat data: {str(e)}")
+
+        elif self.file_managers.get('json', False):
+            seats_folder = "seats"
+            os.makedirs(seats_folder, exist_ok=True)  
+            seat_file_path = os.path.join(seats_folder, f"{document_id}.json")
+            try:
+                with open(seat_file_path, 'w') as file:
+                    json.dump(seat_data, file, indent=4)
+                print(f"Seat data saved to JSON file: {seat_file_path}")
+            except Exception as e:
+                messagebox.showerror("File Error", f"Failed to save seat data to JSON: {str(e)}")
+                return
+
+        for entry in self.seat_entries.values():
+            entry.delete(0, tk.END)
+
+        messagebox.showinfo("Success", f"Seat data for '{document_id}' has been saved and cleared.")
 
     def save_positioning_data(self):
         try:
             occupant_id = self.positioning_entries["OccupantID"].get()  
             seat_id = self.positioning_entries["SeatID"].get()  
 
-            if not occupant_id or not seat_id:
-                raise ValueError("Occupant ID and Seat ID are required.")
+            if self.file_managers.get('db', False):
+                if not occupant_id or not seat_id:
+                    raise ValueError("Occupant ID and Seat ID are required.")
 
-            occupant_doc_id = f"Occupant_{occupant_id}"  
-            occupant_doc = self.db_manager.db.getDocument(occupant_doc_id)
-            if not occupant_doc:
-                raise ValueError(f"No occupant found with ID: {occupant_id}")
+                occupant_doc = self.db_manager.get_occupant_document(occupant_id)
+                if occupant_doc is None:
+                    raise ValueError(f"No occupant found with ID: {occupant_id}")
 
-            seat_doc = self.db_manager.db.getDocument(seat_id)
-            if not seat_doc:
-                raise ValueError(f"No seat found with ID: {seat_id}")
+                seat_doc = self.db_manager.get_seat_document(seat_id)
+                if seat_doc is None:
+                    raise ValueError(f"No seat found with ID: {seat_id}")
 
+            positioning_data = {}
             for field in ["Backrest", "CushionTilt", "Track", "Height", "Uba"]:
                 value = float(self.positioning_entries[field].get())
                 if value < 0:
                     raise ValueError(f"{field} must be a positive float.")
+                positioning_data[field] = value
 
-            self.data["seat_positioning"] = {
-                **{label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
-            }
+            positioning_data["OccupantID"] = occupant_id
+            positioning_data["SeatID"] = seat_id
+
+            self.data["seat_positioning"] = positioning_data
             print("Seat positioning data saved:", self.data["seat_positioning"])
 
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
         except Exception as e:
             messagebox.showerror("Database Error", f"Error accessing database: {str(e)}")
+            print("Error details:", str(e))
 
+
+    def save_environment(self):
+        try:
+            temperature = float(self.environment_entries["Temperature"].get())
+            if temperature < 0:
+                raise ValueError("Temperature must be a positive float.")
+            humidity = float(self.environment_entries["Humidity"].get())
+            if humidity < 0:
+                raise ValueError("Humidity must be a positive float.")
+        except ValueError as e:
+            messagebox.showerror("Input Error", str(e))
+            return
+        
+        self.data["environment"] = {label: entry.get() for label, entry in self.environment_entries.items()}
+        print("Environment data saved:", self.data["environment"])
+
+
+    def save_sensor_data(self):
+        if not self.sensor_data:
+            print("No sensor data to save.")
+            return
+
+        with open('sensor_data.json', 'w') as f:
+            json.dump(self.sensor_data, f, indent=4)
+        print("Sensor data saved successfully!")
+        
+        
     def start_test(self):
         
         if not self.out_of_position_entry.get():
@@ -446,66 +494,80 @@ class App:
         self.timer_label.config(text="00:00:00")  
         self.start_time = None  
 
-    def save_sensor_data(self):
-        if not self.sensor_data:
-            print("No sensor data to save.")
-            return
-
-        with open('sensor_data.json', 'w') as f:
-            json.dump(self.sensor_data, f, indent=4)
-        print("Sensor data saved successfully!")
-
-    def save_environment(self):
-        try:
-            temperature = float(self.environment_entries["Temperature"].get())
-            if temperature < 0:
-                raise ValueError("Temperature must be a positive float.")
-            humidity = float(self.environment_entries["Humidity"].get())
-            if humidity < 0:
-                raise ValueError("Humidity must be a positive float.")
-        except ValueError as e:
-            messagebox.showerror("Input Error", str(e))
-            return
-        
-        self.data["environment"] = {label: entry.get() for label, entry in self.environment_entries.items()}
-        print("Environment data saved:", self.data["environment"])
 
     def submit_all(self):
         try:
             occupant_id = self.positioning_entries["OccupantID"].get()  
             seat_id = self.positioning_entries["SeatID"].get()  
-            
-            if not occupant_id or not seat_id:
-                raise ValueError("Occupant ID and Seat ID are required for submission.")
 
-            occupant_doc_id = f"Occupant_{occupant_id}"  
+            if self.file_managers.get('db', False):
+                if not occupant_id or not seat_id:
+                    raise ValueError("Occupant ID and Seat ID are required for submission.")
 
-            occupant_doc = self.db_manager.db.getDocument(occupant_doc_id)             
-            if not occupant_doc:
-                raise ValueError(f"No occupant found with ID: {occupant_id}")
+                occupant_doc = self.db_manager.get_occupant_document(occupant_id)
+                if occupant_doc is None:
+                    raise ValueError(f"No occupant found with ID: {occupant_id}")
 
-            props = occupant_doc.properties
-            occupant_name = props.get("Name", "Unknown")  
-            
-            short_uuid = str(uuid.uuid4())[:8]  
+                short_uuid = str(uuid.uuid4())[:8]
+                document_id = f"Occupant_{occupant_id}_{short_uuid}"
 
-            document_id = f"{occupant_name}_{occupant_id}_{short_uuid}"
+            else:
+                short_uuid = str(uuid.uuid4())[:8]
+                if occupant_id:
+                    document_id = f"Occupant_{occupant_id}_{short_uuid}"
+                else:
+                    document_id = f"Test_{short_uuid}"
 
             seat_positioning_data = {label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
-            
+
             self.data["seat_positioning"] = seat_positioning_data
             self.data["sensors"] = self.sensor_data
             self.data["environment"] = {label: entry.get() for label, entry in self.environment_entries.items()}
 
-            doc = MutableDocument(document_id)
-            doc["seat_positioning"] = self.data["seat_positioning"]
-            doc["sensors"] = self.data["sensors"]
-            doc["environment"] = self.data["environment"]
-            doc["SeatID"] = seat_id  
-            doc["OccupantID"] = occupant_id  
+            test_data_json = {
+                "seat_positioning": self.data["seat_positioning"],
+                "sensors": self.data["sensors"],
+                "environment": self.data["environment"],
+            }
 
-            self.db_manager.db.saveDocument(doc)
-            print(f"Test data saved successfully with ID: {document_id}")
+            if self.file_managers.get('db', False):
+                test_data_json["SeatID"] = seat_id
+                test_data_json["OccupantID"] = occupant_id
+            else:
+                test_data_json["SeatID"] = seat_id
+                test_data_json["OccupantID"] = occupant_id
+
+            if self.file_managers.get('db', False):
+                doc = Document.createDocWithId(document_id)
+                try:
+                    Document.setJSON(doc, test_data_json)  
+                except Exception as e:
+                    messagebox.showerror("Document Error", f"Failed to create or set JSON on document: {str(e)}")
+                    return
+
+                tests_collection = self.db_manager.tests_collection
+                if tests_collection is None:
+                    messagebox.showerror("Collection Error", "The 'Tests' collection could not be initialized.")
+                    return
+
+                try:
+                    self.db_manager.save_document(tests_collection, doc)  
+                    print(f"Test data saved successfully with ID: {document_id}")
+                except Exception as e:
+                    messagebox.showerror("Save Error", f"Failed to save test data: {str(e)}")
+                    return
+
+            elif self.file_managers.get('json', False):
+                tests_folder = "tests"
+                os.makedirs(tests_folder, exist_ok=True)  
+                test_file_path = os.path.join(tests_folder, f"{document_id}.json")
+                try:
+                    with open(test_file_path, 'w') as file:
+                        json.dump(test_data_json, file, indent=4)
+                    print(f"Test data saved to JSON file: {test_file_path}")
+                except Exception as e:
+                    messagebox.showerror("File Error", f"Failed to save test data to JSON: {str(e)}")
+                    return
 
         except ValueError as e:
             messagebox.showerror("Submission Error", str(e))
@@ -515,6 +577,10 @@ class App:
             return
 
         messagebox.showinfo("Success", "All test data has been successfully submitted and saved.")
+
+
+
+
 
             
     def clear_all(self):
@@ -545,5 +611,3 @@ class App:
         except json.JSONDecodeError as e:
             print("Received invalid JSON:", data)
             print("Error:", e)
-
-

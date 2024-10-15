@@ -1,0 +1,13 @@
+{
+    "SeatID": "P8",
+    "SeatName": "Peugeot",
+    "sensor_numbers_backrest": "4",
+    "SensorNumbersCushion": "4",
+    "CushionWidth": "12 CM",
+    "FoamMaterial": "Auraloop",
+    "CushionFoamThickness": "12 CM",
+    "BackrestFoamThickness": "12 CM",
+    "BolsterCoverMaterial": "NORMAL",
+    "CushionCoverMaterial": "NORMAL",
+    "BackrestCoverMaterial": "NORMAL"
+}

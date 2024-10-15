@@ -1,5 +1,22 @@
 host: '127.0.0.1'
-port: 5439 
+port: 5439
+
+file_managers:
+  db: false
+  json: true
+
+sys:
+  path: '/home/ihebjeridi/Documents/cbliteFinal/couchbase-lite-python'
+
+db_path: '/home/ihebjeridi/Documents/app_OOP/app_acquisation'
+db_name: 'AIO_DB'
+
+collections:
+  occupants: 'Occupants'
+  seats: 'Seats'
+  tests: 'Tests'
+
+scope_name: "_default"
 
 seat_data:
   TeslaM:
@@ -14,7 +31,7 @@ seat_data:
     CushionCoverMaterial: 'Leather'
     BackrestCoverMaterial: 'Leather'
   P8:
-    SeatName: 'Peugeot' 
+    SeatName: 'Peugeot'
     sensor_numbers_backrest: 4
     SensorNumbersCushion: 4
     CushionWidth: '12 CM'
@@ -24,3 +41,4 @@ seat_data:
     BolsterCoverMaterial: 'NORMAL'
     CushionCoverMaterial: 'NORMAL'
     BackrestCoverMaterial: 'NORMAL'
+

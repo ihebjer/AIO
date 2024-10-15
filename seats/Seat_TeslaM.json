@@ -1,0 +1,13 @@
+{
+    "SeatID": "TeslaM",
+    "SeatName": "Modular Tesla",
+    "sensor_numbers_backrest": "4",
+    "SensorNumbersCushion": "6",
+    "CushionWidth": "20 CM",
+    "FoamMaterial": "Traditional polyurethane",
+    "CushionFoamThickness": "20 CM",
+    "BackrestFoamThickness": "20 CM",
+    "BolsterCoverMaterial": "Leather",
+    "CushionCoverMaterial": "Leather",
+    "BackrestCoverMaterial": "Leather"
+}
