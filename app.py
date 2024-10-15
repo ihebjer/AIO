@@ -177,8 +177,8 @@ class App:
         
         tk.Label(self.sensor_tab, text="Out of Position").grid(row=len(self.sensor_labels), column=0, padx=10, pady=5, sticky="ew")
         self.out_of_position_entry = ttk.Combobox(self.sensor_tab, values=[
-            "Empty", "Nominal position","Leaning forward", "Dissymetry", 
-            "Pelvis drift", "Feet on the dashboard"
+            "Empty", "Nominal position","Leaning forward", "Rounded Back",
+            "Pelvis drift"
         ])
         self.out_of_position_entry.grid(row=len(self.sensor_labels), column=1, padx=10, pady=5, sticky="ew")
         
