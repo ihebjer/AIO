@@ -114,7 +114,7 @@ class App:
                 self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
                 self.occupant_entries["Ocuppant Classification"].insert(0, "CHILD")
             elif 35 <= weight <= 42 and 128 <= height <= 136:
-                self.occupant_entries["Ocuppant Classification"].delete(0   , tk.END)
+                self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
                 self.occupant_entries["Ocuppant Classification"].insert(0, "GREY ZONE 1")
             elif 46.8 <= weight <= 51.3 and 139.7 <= height <= 160:
                 self.occupant_entries["Ocuppant Classification"].delete(0, tk.END)
@@ -239,14 +239,26 @@ class App:
             "Uba": tk.Entry(self.positioning_tab),
         }
 
-        self.configure_grid(self.positioning_tab, len(self.positioning_entries) + 1, 2)
+        # Add the Driving Mode combobox
+        self.driving_mode = ttk.Combobox(self.positioning_tab, values=["Drive Mode", "Relax Mode"], state="readonly")
+        self.driving_mode.set("Drive Mode")  # Set default value
+
+        self.configure_grid(self.positioning_tab, len(self.positioning_entries) + 2, 2)  # Update grid size for the additional row
+
         row = 0
         for label, entry in self.positioning_entries.items():
             tk.Label(self.positioning_tab, text=label).grid(row=row, column=0, padx=10, pady=5, sticky="ew")
             entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
             row += 1
 
+        # Add label and combobox for Driving Mode
+        tk.Label(self.positioning_tab, text="Driving Mode").grid(row=row, column=0, padx=10, pady=5, sticky="ew")
+        self.driving_mode.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
+        row += 1
+
+        # Add Save button
         ttk.Button(self.positioning_tab, text="Save", command=self.save_positioning_data, style="TButton").grid(row=row, column=0, columnspan=2, pady=10)
+
 
     def save_occupant(self):
         try:
@@ -374,10 +386,10 @@ class App:
             occupant_id = self.positioning_entries["OccupantID"].get()  
             seat_id = self.positioning_entries["SeatID"].get()  
 
-            if self.file_managers.get('db', False):
-                if not occupant_id or not seat_id:
-                    raise ValueError("Occupant ID and Seat ID are required.")
+            if not occupant_id or not seat_id:
+                raise ValueError("Occupant ID and Seat ID are required.")
 
+            if self.file_managers.get('db', False):
                 occupant_doc = self.db_manager.get_occupant_document(occupant_id)
                 if occupant_doc is None:
                     raise ValueError(f"No occupant found with ID: {occupant_id}")
@@ -393,6 +405,8 @@ class App:
                     raise ValueError(f"{field} must be a positive float.")
                 positioning_data[field] = value
 
+            driving_mode = self.driving_mode.get()
+            positioning_data["DrivingMode"] = driving_mode
             positioning_data["OccupantID"] = occupant_id
             positioning_data["SeatID"] = seat_id
 
@@ -519,6 +533,7 @@ class App:
                     document_id = f"Test_{short_uuid}"
 
             seat_positioning_data = {label: entry.get() for label, entry in self.positioning_entries.items() if label not in ["SeatID", "OccupantID"]}
+            seat_positioning_data["DrivingMode"] = self.driving_mode.get()  
 
             self.data["seat_positioning"] = seat_positioning_data
             self.data["sensors"] = self.sensor_data
@@ -582,6 +597,7 @@ class App:
 
 
 
+
             
     def clear_all(self):
         self.data.clear()
@@ -593,7 +609,6 @@ class App:
         for entry in self.environment_entries.values():
             entry.delete(0, tk.END)
 
-        # Clear sensor values
         for label in self.sensor_labels:
             self.sensor_entries[label].config(text="0.0")
 
