@@ -1,0 +1,8 @@
+tcp:
+  host: '127.0.0.1'
+  port: 5439
+
+model:
+  path: 'Model/decision_tree_model.pkl'
+
+driving_mode: 1
