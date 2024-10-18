@@ -1,0 +1,43 @@
+App Development and Structure:
+Created a data acquisition app using Tkinter with separate tabs for:
+Occupant: Handling occupant information.
+Seat: Managing seat-related data.
+Seat Positioning: Logging angles and positions of seat parts.
+Sensor: Logging sensor values from 10 sensors across 7 positions.
+Environment: Tracking humidity and temperature during tests.
+Database Integration:
+Integrated Couchbase Lite to manage data in collections.
+Created a Couchbase Lite Python wrapper and built the SDK from scratch.
+Utilized the Collection class to manage collections and documents in the database.
+Database Manager Implementation:
+Implemented a DatabaseManager class that:
+Initializes and connects to the Couchbase Lite database.
+Checks for the existence of the database and collections.
+Creates three collections: Occupants, Seats, and Tests.
+Collection Operations:
+Updated the Couchbase Lite Python wrapper to support scope and collection retrieval.
+Developed functionality for:
+Retrieving default collections.
+Creating collections within scopes.
+Retrieving scope and collection names.
+Fetching documents from specific collections.
+Dynamic Data Handling with File Managers:
+Integrated file managers for handling data dynamically:
+Used JSON file management for saving seat positioning and sensor data.
+Configured database (db) and JSON file handling options in config.yaml to allow dynamic switching between saving data to the database or JSON files.
+Ensured that data management (whether through Couchbase Lite or JSON) is dynamically controlled by the settings in the configuration file.
+Occupant Data Handling:
+Created a method to save occupant data to the occupant collection:
+Occupant information includes fields like ID, Name, Age, Weight, Height, and Gender.
+Applied validation for input fields (e.g., positive age, valid gender input).
+Generated document IDs in the format: Occupant_<ID_Occupant>.
+Saved the documents using the updated Couchbase Lite API.
+Sensor Data Logging:
+Implemented automatic logging of sensor values across positions, removing the need for manual start/stop buttons.
+Recorded absolute sensor values, rounded to two decimal places, and ensured they are stored properly.
+Document Saving and Data Management:
+Shifted the Couchbase Lite logic out of individual data handling (e.g., occupant or positioning data) into a separate structure for efficiency and clarity.
+Ensured that JSON format is used for data storage where applicable (for seat positioning, sensor data, etc.).
+TCP Client-Server Communication:
+Developed a TCP client integrated with the TCP server for data acquisition.
+Modified the client to use Socket.io for enhanced real-time data communication.
